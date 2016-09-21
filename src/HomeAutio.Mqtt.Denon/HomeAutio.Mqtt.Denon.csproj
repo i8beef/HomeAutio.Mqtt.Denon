@@ -37,8 +37,8 @@
       <HintPath>..\packages\HomeAutio.Mqtt.Core.1.0.0.10\lib\net452\HomeAutio.Mqtt.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="I8Beef.Denon, Version=2.0.0.11, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\I8Beef.Denon.2.0.0.11\lib\net452\I8Beef.Denon.dll</HintPath>
+    <Reference Include="I8Beef.Denon, Version=2.0.0.13, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\I8Beef.Denon.2.0.0.13\lib\net452\I8Beef.Denon.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="M2Mqtt.Net, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
