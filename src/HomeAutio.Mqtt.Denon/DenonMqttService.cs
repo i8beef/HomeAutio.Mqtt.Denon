@@ -46,6 +46,7 @@ namespace HomeAutio.Mqtt.Denon
         public override void StartService()
         {
             _client.Connect();
+            GetConfig();
         }
 
         /// <summary>
@@ -129,7 +130,73 @@ namespace HomeAutio.Mqtt.Denon
         private void Denon_EventReceived(object sender, Command command)
         {
             _log.Debug($"Denon event received: {command.GetType()} {command.Code} {command.Value}");
-            _mqttClient.Publish(_topicRoot + "/controls/" + command.GetType(), Encoding.UTF8.GetBytes(command.Value), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, true);
+
+            string commandType = null;
+            switch (command.GetType().Name)
+            {
+                case "PowerCommand":
+                    commandType = "power";
+                    break;
+                case "VolumeCommand":
+                    commandType = "volume";
+                    break;
+                case "MuteCommand":
+                    commandType = "mute";
+                    break;
+                case "InputCommand":
+                    commandType = "input";
+                    break;
+                case "SurroundModeCommand":
+                    commandType = "surroundMode";
+                    break;
+                case "TunerFrequencyCommand":
+                    commandType = "tunerFrequency";
+                    break;
+                case "TunerModeCommand":
+                    commandType = "tunerMode";
+                    break;
+                case "ZonePowerCommand":
+                    commandType = $"zone{((ZonePowerCommand)command).ZoneId}Power";
+                    break;
+                case "ZoneVolumeCommand":
+                    commandType = $"zone{((ZoneVolumeCommand)command).ZoneId}Volume";
+                    break;
+                case "ZoneMuteCommand":
+                    commandType = $"zone{((ZoneMuteCommand)command).ZoneId}Mute";
+                    break;
+                case "ZoneInputCommand":
+                    commandType = $"zone{((ZoneInputCommand)command).ZoneId}Input";
+                    break;
+            }
+
+            if (commandType != null)
+                _mqttClient.Publish(_topicRoot + "/controls/" + commandType, Encoding.UTF8.GetBytes(command.Value), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, true);
+        }
+
+        /// <summary>
+        /// Maps Denon device actions to subscription topics.
+        /// </summary>
+        private void GetConfig()
+        {
+            var commands = new Command[] {
+                new PowerCommand { Value = "?" },
+                new VolumeCommand { Value = "?" },
+                new MuteCommand { Value = "?" },
+                new InputCommand { Value = "?" },
+                new SurroundModeCommand { Value = "?" },
+                new TunerFrequencyCommand { Value = "?" },
+                new TunerModeCommand { Value = "?" },
+                new ZonePowerCommand { Value = "?", ZoneId = 2 },
+                new ZoneVolumeCommand { Value = "?", ZoneId = 2 },
+                new ZoneMuteCommand { Value = "?", ZoneId = 2 },
+                new ZoneInputCommand { Value = "?", ZoneId = 2 }
+            };
+
+            // Run all queries and let the event handler publish out the query results
+            foreach (var command in commands)
+            {
+                _client.SendCommandAsync(command);
+            }
         }
 
         #endregion
