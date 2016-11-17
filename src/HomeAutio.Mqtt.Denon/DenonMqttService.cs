@@ -31,10 +31,7 @@ namespace HomeAutio.Mqtt.Denon
             _client.MessageReceived += (object sender, I8Beef.Denon.Events.MessageReceivedEventArgs e) => { _log.Debug("Denon Message received: " + e.Message); };
             _client.Error += (object sender, System.IO.ErrorEventArgs e) => {
                 _log.Error(e.GetException());
-
-                // Stream parsing is lost at this point, restart the client (need to test this)
-                _client.Close();
-                _client.Connect();
+                throw new System.Exception("Denon connection lost");
             };
         }
 

@@ -33,8 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HomeAutio.Mqtt.Core, Version=1.0.0.14, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\HomeAutio.Mqtt.Core.1.0.0.14\lib\net452\HomeAutio.Mqtt.Core.dll</HintPath>
+    <Reference Include="HomeAutio.Mqtt.Core, Version=1.0.0.18, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HomeAutio.Mqtt.Core.1.0.0.18\lib\net452\HomeAutio.Mqtt.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="I8Beef.Denon, Version=2.0.0.13, Culture=neutral, processorArchitecture=MSIL">
