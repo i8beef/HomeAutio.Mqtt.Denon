@@ -1,13 +1,23 @@
-﻿using I8Beef.Denon;
-using System.Configuration;
+﻿using System.Configuration;
+using I8Beef.Denon;
+using NLog;
 using Topshelf;
 
 namespace HomeAutio.Mqtt.Denon
 {
-    class Program
+    /// <summary>
+    /// Main program entrypoint.
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main method.
+        /// </summary>
+        /// <param name="args">Command line arguments.</param>
+        public static void Main(string[] args)
         {
+            var log = LogManager.GetCurrentClassLogger();
+
             var brokerIp = ConfigurationManager.AppSettings["brokerIp"];
             var brokerPort = int.Parse(ConfigurationManager.AppSettings["brokerPort"]);
             var brokerUsername = ConfigurationManager.AppSettings["brokerUsername"];
@@ -25,6 +35,7 @@ namespace HomeAutio.Mqtt.Denon
             HostFactory.Run(x =>
             {
                 x.UseNLog();
+                x.OnException(ex => log.Error(ex));
 
                 x.Service<DenonMqttService>(s =>
                 {
@@ -43,7 +54,6 @@ namespace HomeAutio.Mqtt.Denon
                 x.RunAsLocalSystem();
                 x.UseAssemblyInfoForServiceInfo();
             });
-
         }
     }
 }
