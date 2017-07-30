@@ -125,7 +125,7 @@ namespace HomeAutio.Mqtt.Denon
             }
 
             if (command != null)
-                _client.SendCommandAsync(command);
+                _client.SendCommandAsync(command).Wait();
         }
 
         #endregion
@@ -206,7 +206,7 @@ namespace HomeAutio.Mqtt.Denon
             // Run all queries and let the event handler publish out the query results
             foreach (var command in commands)
             {
-                _client.SendCommandAsync(command);
+                _client.SendCommandAsync(command).Wait();
             }
         }
 
