@@ -6,6 +6,7 @@ using I8Beef.Denon.Commands;
 using I8Beef.Denon.Events;
 using NLog;
 using uPLibrary.Networking.M2Mqtt.Messages;
+using Topshelf;
 
 namespace HomeAutio.Mqtt.Denon
 {
@@ -16,6 +17,8 @@ namespace HomeAutio.Mqtt.Denon
     {
         private ILogger _log = LogManager.GetCurrentClassLogger();
         private bool _disposed = false;
+
+        private HostControl _hostControl;
 
         private IClient _client;
         private string _denonName;
@@ -45,11 +48,25 @@ namespace HomeAutio.Mqtt.Denon
             _client.Error += (object sender, System.IO.ErrorEventArgs e) =>
             {
                 _log.Error(e.GetException());
-                throw new Exception("Denon connection lost");
+                _hostControl.Restart();
             };
         }
 
         #region Service implementation
+
+        /// <summary>
+        /// Topshelf service startup method that provides host control interface.
+        /// </summary>
+        /// <param name="hostControl">Topshelf host control interface.</param>
+        /// <returns>Indicates if service started successfully.</returns>
+        public bool Start(HostControl hostControl)
+        {
+            _hostControl = hostControl;
+
+            Start();
+
+            return true;
+        }
 
         /// <summary>
         /// Service Start action.

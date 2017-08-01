@@ -40,7 +40,7 @@ namespace HomeAutio.Mqtt.Denon
                 x.Service<DenonMqttService>(s =>
                 {
                     s.ConstructUsing(name => new DenonMqttService(denonClient, denonName, brokerIp, brokerPort, brokerUsername, brokerPassword));
-                    s.WhenStarted(tc => tc.Start());
+                    s.WhenStarted((tc, hostControl) => tc.Start(hostControl));
                     s.WhenStopped(tc => tc.Stop());
                 });
 
