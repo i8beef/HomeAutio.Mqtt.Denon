@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using I8Beef.Denon;
-using I8Beef.Denon.TelnetClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,7 +53,14 @@ namespace HomeAutio.Mqtt.Denon
                     services.AddScoped<IClient>(serviceProvider =>
                     {
                         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        return new Client(configuration.GetValue<string>("denonHost"));
+                        if (configuration.GetValue<string>("denonConnectionType") == "http")
+                        {
+                            return new I8Beef.Denon.HttpClient.Client(configuration.GetValue<string>("denonHost"));
+                        }
+                        else
+                        {
+                            return new I8Beef.Denon.TelnetClient.Client(configuration.GetValue<string>("denonHost"));
+                        }
                     });
 
                     // Setup service instance
