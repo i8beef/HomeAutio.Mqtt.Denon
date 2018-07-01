@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HomeAutio.Mqtt.Denon", "HomeAutio.Mqtt.Denon\HomeAutio.Mqtt.Denon.csproj", "{EEF76313-6785-41AD-A844-78119357D60C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HomeAutio.Mqtt.Denon", "HomeAutio.Mqtt.Denon\HomeAutio.Mqtt.Denon.csproj", "{B2592194-8F3B-434F-AAE1-A938F97D4657}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,12 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EEF76313-6785-41AD-A844-78119357D60C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EEF76313-6785-41AD-A844-78119357D60C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EEF76313-6785-41AD-A844-78119357D60C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EEF76313-6785-41AD-A844-78119357D60C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2592194-8F3B-434F-AAE1-A938F97D4657}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2592194-8F3B-434F-AAE1-A938F97D4657}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2592194-8F3B-434F-AAE1-A938F97D4657}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2592194-8F3B-434F-AAE1-A938F97D4657}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39C6045D-35B6-413F-A7B8-566DA05584D1}
 	EndGlobalSection
 EndGlobal

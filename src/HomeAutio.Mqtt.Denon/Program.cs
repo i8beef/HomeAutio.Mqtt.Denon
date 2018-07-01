@@ -1,59 +1,79 @@
-﻿using System.Configuration;
+﻿using System;
+using System.Threading.Tasks;
 using I8Beef.Denon;
-using NLog;
-using Topshelf;
+using I8Beef.Denon.TelnetClient;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace HomeAutio.Mqtt.Denon
 {
     /// <summary>
-    /// Main program entrypoint.
+    /// Main program entry point.
     /// </summary>
     public class Program
     {
         /// <summary>
-        /// Main method.
+        /// Main program entry point.
         /// </summary>
-        /// <param name="args">Command line arguments.</param>
+        /// <param name="args">Arguments.</param>
         public static void Main(string[] args)
         {
-            var log = LogManager.GetCurrentClassLogger();
+            MainAsync(args).GetAwaiter().GetResult();
+        }
 
-            var brokerIp = ConfigurationManager.AppSettings["brokerIp"];
-            var brokerPort = int.Parse(ConfigurationManager.AppSettings["brokerPort"]);
-            var brokerUsername = ConfigurationManager.AppSettings["brokerUsername"];
-            var brokerPassword = ConfigurationManager.AppSettings["brokerPassword"];
+        /// <summary>
+        /// Main program entry point.
+        /// </summary>
+        /// <param name="args">Arguments.</param>
+        /// <returns>Awaitable <see cref="Task" />.</returns>
+        public static async Task MainAsync(string[] args)
+        {
+            // Setup logging
+            Log.Logger = new LoggerConfiguration()
+              .Enrich.FromLogContext()
+              .WriteTo.Console()
+              .WriteTo.RollingFile(@"logs/HomeAutio.Mqtt.Denon.log")
+              .CreateLogger();
 
-            var denonIp = ConfigurationManager.AppSettings["denonIp"];
-            IClient denonClient;
-            if (ConfigurationManager.AppSettings["denonType"] == "telnet")
-                denonClient = new I8Beef.Denon.TelnetClient.Client(denonIp);
-            else
-                denonClient = new I8Beef.Denon.HttpClient.Client(denonIp);
-
-            var denonName = ConfigurationManager.AppSettings["denonName"];
-
-            HostFactory.Run(x =>
-            {
-                x.UseNLog();
-                x.OnException(ex => log.Error(ex));
-
-                x.Service<DenonMqttService>(s =>
+            var hostBuilder = new HostBuilder()
+                .ConfigureAppConfiguration((hostContext, config) =>
                 {
-                    s.ConstructUsing(name => new DenonMqttService(denonClient, denonName, brokerIp, brokerPort, brokerUsername, brokerPassword));
-                    s.WhenStarted(tc => tc.Start());
-                    s.WhenStopped(tc => tc.Stop());
+                    config.SetBasePath(Environment.CurrentDirectory);
+                    config.AddJsonFile("appsettings.json", optional: false);
+                })
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.AddSerilog();
+                })
+                .ConfigureServices((hostContext, services) =>
+                {
+                    // Setup client
+                    services.AddScoped<IClient>(serviceProvider =>
+                    {
+                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                        return new Client(configuration.GetValue<string>("denonHost"));
+                    });
+
+                    // Setup service instance
+                    services.AddScoped<IHostedService, DenonMqttService>(serviceProvider =>
+                    {
+                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                        return new DenonMqttService(
+                            serviceProvider.GetRequiredService<IApplicationLifetime>(),
+                            serviceProvider.GetRequiredService<ILogger<DenonMqttService>>(),
+                            serviceProvider.GetRequiredService<IClient>(),
+                            configuration.GetValue<string>("denonName"),
+                            configuration.GetValue<string>("brokerIp"),
+                            configuration.GetValue<int>("brokerPort"),
+                            configuration.GetValue<string>("brokerUsername"),
+                            configuration.GetValue<string>("brokerPassword"));
+                    });
                 });
 
-                x.EnableServiceRecovery(r =>
-                {
-                    r.RestartService(0);
-                    r.RestartService(0);
-                    r.RestartService(0);
-                });
-
-                x.RunAsLocalSystem();
-                x.UseAssemblyInfoForServiceInfo();
-            });
+            await hostBuilder.RunConsoleAsync();
         }
     }
 }

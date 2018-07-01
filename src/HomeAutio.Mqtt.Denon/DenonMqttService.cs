@@ -1,10 +1,12 @@
-﻿using System.Text;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using HomeAutio.Mqtt.Core;
 using I8Beef.Denon;
 using I8Beef.Denon.Commands;
 using I8Beef.Denon.Events;
-using NLog;
-using uPLibrary.Networking.M2Mqtt.Messages;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using MQTTnet;
 
 namespace HomeAutio.Mqtt.Denon
 {
@@ -13,7 +15,7 @@ namespace HomeAutio.Mqtt.Denon
     /// </summary>
     public class DenonMqttService : ServiceBase
     {
-        private ILogger _log = LogManager.GetCurrentClassLogger();
+        private ILogger<DenonMqttService> _log;
         private bool _disposed = false;
 
         private IClient _client;
@@ -22,15 +24,26 @@ namespace HomeAutio.Mqtt.Denon
         /// <summary>
         /// Initializes a new instance of the <see cref="DenonMqttService"/> class.
         /// </summary>
+        /// <param name="applicationLifetime">Application lifetime instance.</param>
+        /// <param name="logger">Logging instance.</param>
         /// <param name="denonClient">Denon client.</param>
         /// <param name="denonName">Denon name.</param>
         /// <param name="brokerIp">MQTT broker IP.</param>
         /// <param name="brokerPort">MQTT broker port.</param>
         /// <param name="brokerUsername">MQTT broker username.</param>
         /// <param name="brokerPassword">MQTT broker password.</param>
-        public DenonMqttService(IClient denonClient, string denonName, string brokerIp, int brokerPort = 1883, string brokerUsername = null, string brokerPassword = null)
-            : base(brokerIp, brokerPort, brokerUsername, brokerPassword, "denon/" + denonName)
+        public DenonMqttService(
+            IApplicationLifetime applicationLifetime,
+            ILogger<DenonMqttService> logger,
+            IClient denonClient,
+            string denonName,
+            string brokerIp,
+            int brokerPort = 1883,
+            string brokerUsername = null,
+            string brokerPassword = null)
+            : base(applicationLifetime, logger, brokerIp, brokerPort, brokerUsername, brokerPassword, "denon/" + denonName)
         {
+            _log = logger;
             SubscribedTopics.Add(TopicRoot + "/controls/+/set");
 
             _client = denonClient;
@@ -39,32 +52,30 @@ namespace HomeAutio.Mqtt.Denon
             _client.EventReceived += Denon_EventReceived;
 
             // Denon client logging
-            _client.MessageSent += (object sender, MessageSentEventArgs e) => { _log.Debug("Denon Message sent: " + e.Message); };
-            _client.MessageReceived += (object sender, MessageReceivedEventArgs e) => { _log.Debug("Denon Message received: " + e.Message); };
+            _client.MessageSent += (object sender, MessageSentEventArgs e) => { _log.LogDebug("Denon Message sent: " + e.Message); };
+            _client.MessageReceived += (object sender, MessageReceivedEventArgs e) => { _log.LogDebug("Denon Message received: " + e.Message); };
             _client.Error += (object sender, System.IO.ErrorEventArgs e) =>
             {
-                _log.Error(e.GetException());
+                var exception = e.GetException();
+                _log.LogError(exception, exception.Message);
                 System.Environment.Exit(1);
             };
         }
 
         #region Service implementation
 
-        /// <summary>
-        /// Service Start action.
-        /// </summary>
-        protected override void StartService()
+        /// <inheritdoc />
+        protected override async Task StartServiceAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             _client.Connect();
-            GetConfig();
+            await GetConfigAsync()
+                .ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Service Stop action.
-        /// </summary>
-        protected override void StopService()
+        /// <inheritdoc />
+        protected override Task StopServiceAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            Dispose();
+            return Task.CompletedTask;
         }
 
         #endregion
@@ -72,16 +83,16 @@ namespace HomeAutio.Mqtt.Denon
         #region MQTT Implementation
 
         /// <summary>
-        /// Handles commands for the Harmony published to MQTT.
+        /// Handles commands for the Denon published to MQTT.
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        protected override void Mqtt_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+        protected override async void Mqtt_MqttMsgPublishReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
-            var message = Encoding.UTF8.GetString(e.Message);
-            _log.Debug("MQTT message received for topic " + e.Topic + ": " + message);
+            var message = e.ApplicationMessage.ConvertPayloadToString();
+            _log.LogDebug("MQTT message received for topic " + e.ApplicationMessage.Topic + ": " + message);
 
-            var commandType = e.Topic.Replace(TopicRoot + "/controls/", string.Empty).Replace("/set", string.Empty);
+            var commandType = e.ApplicationMessage.Topic.Replace(TopicRoot + "/controls/", string.Empty).Replace("/set", string.Empty);
 
             Command command = null;
             if (commandType == "power")
@@ -124,7 +135,10 @@ namespace HomeAutio.Mqtt.Denon
             }
 
             if (command != null)
-                _client.SendCommandAsync(command).Wait();
+            {
+                await _client.SendCommandAsync(command)
+                    .ConfigureAwait(false);
+            }
         }
 
         #endregion
@@ -132,13 +146,13 @@ namespace HomeAutio.Mqtt.Denon
         #region Denon implementation
 
         /// <summary>
-        /// Handles publishing updates to the harmony current activity to MQTT.
+        /// Handles publishing updates to the Denon current activity to MQTT.
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        private void Denon_EventReceived(object sender, CommandEventArgs e)
+        private async void Denon_EventReceived(object sender, CommandEventArgs e)
         {
-            _log.Debug($"Denon event received: {e.Command.GetType()} {e.Command.Code} {e.Command.Value}");
+            _log.LogDebug($"Denon event received: {e.Command.GetType()} {e.Command.Code} {e.Command.Value}");
 
             string commandType = null;
             switch (e.Command.GetType().Name)
@@ -179,13 +193,22 @@ namespace HomeAutio.Mqtt.Denon
             }
 
             if (commandType != null)
-                MqttClient.Publish(TopicRoot + "/controls/" + commandType, Encoding.UTF8.GetBytes(e.Command.Value), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, true);
+            {
+                await MqttClient.PublishAsync(new MqttApplicationMessageBuilder()
+                        .WithTopic(TopicRoot + "/controls/" + commandType)
+                        .WithPayload(e.Command.Value)
+                        .WithAtLeastOnceQoS()
+                        .WithRetainFlag()
+                        .Build())
+                        .ConfigureAwait(false);
+            }
         }
 
         /// <summary>
         /// Maps Denon device actions to subscription topics.
         /// </summary>
-        private void GetConfig()
+        /// <returns>An awaitable <see cref="Task"/>.</returns>
+        private async Task GetConfigAsync()
         {
             var commands = new Command[]
             {
@@ -205,7 +228,8 @@ namespace HomeAutio.Mqtt.Denon
             // Run all queries and let the event handler publish out the query results
             foreach (var command in commands)
             {
-                _client.SendCommandAsync(command).Wait();
+                await _client.SendCommandAsync(command)
+                    .ConfigureAwait(false);
             }
         }
 
