@@ -30,23 +30,39 @@ namespace HomeAutio.Mqtt.Denon
         /// <returns>Awaitable <see cref="Task" />.</returns>
         public static async Task MainAsync(string[] args)
         {
+            // Setup config
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Environment.CurrentDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
             // Setup logging
             Log.Logger = new LoggerConfiguration()
-              .Enrich.FromLogContext()
-              .WriteTo.Console()
-              .WriteTo.RollingFile(@"logs/HomeAutio.Mqtt.Denon.log")
-              .CreateLogger();
+                .ReadFrom.Configuration(config)
+                .CreateLogger();
 
-            var hostBuilder = new HostBuilder()
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    config.SetBasePath(Environment.CurrentDirectory);
-                    config.AddJsonFile("appsettings.json", optional: false);
-                })
-                .ConfigureLogging((hostingContext, logging) =>
-                {
-                    logging.AddSerilog();
-                })
+            try
+            {
+                var hostBuilder = CreateHostBuilder(config);
+                await hostBuilder.RunConsoleAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Fatal(ex, ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates an <see cref="IHostBuilder"/>.
+        /// </summary>
+        /// <param name="config">External configuration.</param>
+        /// <returns>A configured <see cref="IHostBuilder"/>.</returns>
+        private static IHostBuilder CreateHostBuilder(IConfiguration config)
+        {
+            return new HostBuilder()
+                .ConfigureAppConfiguration((hostContext, configuration) => configuration.AddConfiguration(config))
+                .ConfigureLogging((hostingContext, logging) => logging.AddSerilog())
                 .ConfigureServices((hostContext, services) =>
                 {
                     // Setup client
@@ -78,8 +94,6 @@ namespace HomeAutio.Mqtt.Denon
                             configuration.GetValue<string>("brokerPassword"));
                     });
                 });
-
-            await hostBuilder.RunConsoleAsync();
         }
     }
 }
