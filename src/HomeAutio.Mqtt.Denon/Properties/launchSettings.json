@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "HomeAutio.Mqtt.Denon": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

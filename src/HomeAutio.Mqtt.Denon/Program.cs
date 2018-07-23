@@ -30,10 +30,15 @@ namespace HomeAutio.Mqtt.Denon
         /// <returns>Awaitable <see cref="Task" />.</returns>
         public static async Task MainAsync(string[] args)
         {
+            var environmentName = Environment.GetEnvironmentVariable("ENVIRONMENT");
+            if (string.IsNullOrEmpty(environmentName))
+                environmentName = "Development";
+
             // Setup config
             var config = new ConfigurationBuilder()
                 .SetBasePath(Environment.CurrentDirectory)
                 .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
                 .Build();
 
             // Setup logging
@@ -50,6 +55,10 @@ namespace HomeAutio.Mqtt.Denon
             {
                 Log.Logger.Fatal(ex, ex.Message);
                 throw;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
             }
         }
 
@@ -68,30 +77,32 @@ namespace HomeAutio.Mqtt.Denon
                     // Setup client
                     services.AddScoped<IClient>(serviceProvider =>
                     {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        if (configuration.GetValue<string>("denonConnectionType") == "http")
+                        if (config.GetValue<string>("denon:denonConnectionType") == "http")
                         {
-                            return new I8Beef.Denon.HttpClient.Client(configuration.GetValue<string>("denonHost"));
+                            return new I8Beef.Denon.HttpClient.Client(config.GetValue<string>("denon:denonHost"));
                         }
                         else
                         {
-                            return new I8Beef.Denon.TelnetClient.Client(configuration.GetValue<string>("denonHost"));
+                            return new I8Beef.Denon.TelnetClient.Client(config.GetValue<string>("denon:denonHost"));
                         }
                     });
 
                     // Setup service instance
                     services.AddScoped<IHostedService, DenonMqttService>(serviceProvider =>
                     {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                        var brokerSettings = new Core.BrokerSettings
+                        {
+                            BrokerIp = config.GetValue<string>("mqtt:brokerIp"),
+                            BrokerPort = config.GetValue<int>("mqtt:brokerPort"),
+                            BrokerUsername = config.GetValue<string>("mqtt:brokerUsername"),
+                            BrokerPassword = config.GetValue<string>("mqtt:brokerPassword")
+                        };
+
                         return new DenonMqttService(
-                            serviceProvider.GetRequiredService<IApplicationLifetime>(),
                             serviceProvider.GetRequiredService<ILogger<DenonMqttService>>(),
                             serviceProvider.GetRequiredService<IClient>(),
-                            configuration.GetValue<string>("denonName"),
-                            configuration.GetValue<string>("brokerIp"),
-                            configuration.GetValue<int>("brokerPort"),
-                            configuration.GetValue<string>("brokerUsername"),
-                            configuration.GetValue<string>("brokerPassword"));
+                            config.GetValue<string>("denon:denonName"),
+                            brokerSettings);
                     });
                 });
         }
