@@ -6,6 +6,7 @@ using I8Beef.Denon.Commands;
 using I8Beef.Denon.Events;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
+using MQTTnet.Extensions.ManagedClient;
 
 namespace HomeAutio.Mqtt.Denon
 {
@@ -14,11 +15,9 @@ namespace HomeAutio.Mqtt.Denon
     /// </summary>
     public class DenonMqttService : ServiceBase
     {
-        private ILogger<DenonMqttService> _log;
+        private readonly ILogger<DenonMqttService> _log;
+        private readonly IClient _client;
         private bool _disposed = false;
-
-        private IClient _client;
-        private string _denonName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DenonMqttService"/> class.
@@ -38,7 +37,6 @@ namespace HomeAutio.Mqtt.Denon
             SubscribedTopics.Add(TopicRoot + "/controls/+/set");
 
             _client = denonClient;
-            _denonName = denonName;
 
             _client.EventReceived += Denon_EventReceived;
 
@@ -56,7 +54,7 @@ namespace HomeAutio.Mqtt.Denon
         #region Service implementation
 
         /// <inheritdoc />
-        protected override async Task StartServiceAsync(CancellationToken cancellationToken = default(CancellationToken))
+        protected override async Task StartServiceAsync(CancellationToken cancellationToken = default)
         {
             _client.Connect();
             await GetConfigAsync()
@@ -64,7 +62,7 @@ namespace HomeAutio.Mqtt.Denon
         }
 
         /// <inheritdoc />
-        protected override Task StopServiceAsync(CancellationToken cancellationToken = default(CancellationToken))
+        protected override Task StopServiceAsync(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
@@ -76,9 +74,8 @@ namespace HomeAutio.Mqtt.Denon
         /// <summary>
         /// Handles commands for the Denon published to MQTT.
         /// </summary>
-        /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        protected override async void Mqtt_MqttMsgPublishReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        protected override async void Mqtt_MqttMsgPublishReceived(MqttApplicationMessageReceivedEventArgs e)
         {
             var message = e.ApplicationMessage.ConvertPayloadToString();
             _log.LogInformation("MQTT message received for topic " + e.ApplicationMessage.Topic + ": " + message);
