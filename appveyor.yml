@@ -24,7 +24,6 @@ artifacts:
   name: HomeAutio.Mqtt.Denon-$(appveyor_build_version)
 deploy:
 - provider: GitHub
-  auth_token:
-    secure: t8wH1tV0xPU25FeKde96GGBYZIcWVhBy7VuIJujTodtx1FSQzlI0AEOPHLKyPORa
+  auth_token: $(GITHUB_API_KEY)
   artifact: src\HomeAutio.Mqtt.Denon\bin\$(configuration)\netcoreapp3.1\HomeAutio.Mqtt.Denon-$(appveyor_build_version).zip
   force_update: false
