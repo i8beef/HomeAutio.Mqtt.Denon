@@ -20,10 +20,10 @@ build_script:
 
     dotnet publish -c Release src/HomeAutio.Mqtt.Denon.sln
 artifacts:
-- path: src\HomeAutio.Mqtt.Denon\bin\$(configuration)\netcoreapp3.1\publish
+- path: src\HomeAutio.Mqtt.Denon\bin\$(configuration)\net5.0\publish
   name: HomeAutio.Mqtt.Denon-$(appveyor_build_version)
 deploy:
 - provider: GitHub
   auth_token: $(GITHUB_API_KEY)
-  artifact: src\HomeAutio.Mqtt.Denon\bin\$(configuration)\netcoreapp3.1\HomeAutio.Mqtt.Denon-$(appveyor_build_version).zip
+  artifact: src\HomeAutio.Mqtt.Denon\bin\$(configuration)\net5.0\HomeAutio.Mqtt.Denon-$(appveyor_build_version).zip
   force_update: false
