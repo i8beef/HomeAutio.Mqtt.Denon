@@ -10,7 +10,7 @@ env:
   SOLUTION: "./src/HomeAutio.Mqtt.Denon.sln"
   BUILDOUTPUTPATH: "./src/HomeAutio.Mqtt.Denon/bin/Release/net5.0"
   REGISTRY: ghcr.io
-  DOCKER_NAME: "i8beef/homeautio.mqtt.Denon"
+  DOCKER_NAME: "i8beef/homeautio.mqtt.denon"
 
 jobs:
   release:
