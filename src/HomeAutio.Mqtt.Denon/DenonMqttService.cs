@@ -64,6 +64,7 @@ namespace HomeAutio.Mqtt.Denon
         /// <inheritdoc />
         protected override Task StopServiceAsync(CancellationToken cancellationToken = default)
         {
+            _client.Dispose();
             return Task.CompletedTask;
         }
 
