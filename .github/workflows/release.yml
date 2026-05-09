@@ -13,7 +13,9 @@ env:
   DOTNETVERSION: "8.0.x"
   APP: "HomeAutio.Mqtt.Denon"
   SOLUTION: "./src/HomeAutio.Mqtt.Denon.sln"
+  PROJECT: "./src/HomeAutio.Mqtt.Denon/HomeAutio.Mqtt.Denon.csproj"
   BUILDOUTPUTPATH: "./src/HomeAutio.Mqtt.Denon/bin/Release/net8.0"
+  PUBLISHOUTPUTPATH: "./publish"
   REGISTRY: ghcr.io
   DOCKER_NAME: "i8beef/homeautio.mqtt.denon"
 
@@ -42,13 +44,16 @@ jobs:
         run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore /p:Version=${{ env.VERSION }}
 
       - name: Test
-        run: dotnet test ${{ env.SOLUTION }} --no-restore --verbosity normal --logger trx --results-directory "TestResults"
+        run: dotnet test ${{ env.SOLUTION }} --configuration Release --no-restore --no-build --verbosity normal --logger trx --results-directory "TestResults"
 
-      - name: Upload app build artifact
+      - name: Publish
+        run: dotnet publish ${{ env.PROJECT }} --configuration Release --no-restore --no-build /p:Version=${{ env.VERSION }} -o ${{ env.PUBLISHOUTPUTPATH }}
+
+      - name: Upload published app artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APP }}-${{ env.VERSION }}
-          path: ${{ env.BUILDOUTPUTPATH }}
+          path: ${{ env.PUBLISHOUTPUTPATH }}
 
       - name: Upload TestResults build artifact
         uses: actions/upload-artifact@v4
@@ -57,7 +62,7 @@ jobs:
           path: TestResults
 
       - name: ZIP release artifact
-        run: zip -r ${{ env.APP }}-${{ env.VERSION }}.zip ${{ env.BUILDOUTPUTPATH }}
+        run: zip -r ${{ env.APP }}-${{ env.VERSION }}.zip ${{ env.PUBLISHOUTPUTPATH }}
 
       - name: GitHub release
         run: |
@@ -89,8 +94,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup .NET SDK ${{ env.DOTNETVERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNETVERSION }}
+
       - name: Set version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Publish app
+        run: dotnet publish ${{ env.PROJECT }} --configuration Release /p:Version=${{ env.VERSION }} -o ${{ env.PUBLISHOUTPUTPATH }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -114,10 +127,9 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./src
+          context: ${{ env.PUBLISHOUTPUTPATH }}
           file: ${{ matrix.docker-file }}
           platforms: ${{ matrix.platform }}
-          build-args: VERSION=${{ env.VERSION }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
